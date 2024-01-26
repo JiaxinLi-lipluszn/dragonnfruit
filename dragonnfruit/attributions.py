@@ -7,7 +7,8 @@ from tqdm import tqdm
 from tqdm import trange
 
 from bpnetlite.attributions import _ProfileLogitScaling
-from bpnetlite.attributions import calculate_attributions
+# from bpnetlite.attributions import calculate_attributions
+from bpnetlite.attributions import attribute
 from bpnetlite.attributions import create_references
 from bpnetlite.attributions import hypothetical_attributions
 
@@ -174,7 +175,7 @@ def calculate_attributions_cross(model, X, cell_states, args=None,
 			_ref = create_references(X[i:i+1], algorithm=references, 
 				n_shuffles=n_shuffles).expand(n_states, -1, -1, -1)
 
-		attr = calculate_attributions(model=wrapper, 
+		attr = attribute(model=wrapper, 
 			X=_X, 
 			args=(cell_states,) + args if args is not None else (cell_states,), 
 			model_output=None, 

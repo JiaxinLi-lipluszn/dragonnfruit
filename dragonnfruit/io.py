@@ -98,12 +98,17 @@ def _extract_example(self, chrom, mid, cell_idx, idx):
 	r: torch.Tensor, shape=(1,)
 		The read depth of that particular cell.
 	"""
-
+	# print(f"mid: {mid}")
+	# print(f"window: {self.window}")
 	start, end = mid - self.window // 2, mid + self.window // 2
 	neighbs = self.neighbors[cell_idx]
 
 	X = self.sequence[chrom][:, start:end]
+	# print(f"chrom: {chrom}")
+	# print(f"range: {self.trimming}")
+	# print(f"start and end :{start}, {end}")
 	y = self.signal[chrom][:, start+self.trimming:end-self.trimming]
+	# print(f"y: {y}")
 	y = numpy.array(y[neighbs].sum(axis=0))[0]
 
 	c = self.cell_states[cell_idx]
@@ -229,6 +234,7 @@ class GenomewideGenerator(torch.utils.data.Dataset):
 		self.random_state = numpy.random.RandomState(random_state)
 
 		self.signal = {chrom: signal[chrom] for chrom in chroms}
+		# print(f"signal here:{self.signal}")
 		self.sequence = {chrom: sequence[chrom] for chrom in chroms}
 		self.neighbors = neighbors
 		self.cell_states = cell_states

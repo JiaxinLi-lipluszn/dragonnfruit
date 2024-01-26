@@ -172,9 +172,13 @@ class DragoNNFruit(torch.nn.Module):
 			The predicted logit profile for each example. Note that this is not
 			a normalized value.
 		"""
-
-		return read_depths + self.bias(X)[0][:, 0] + self.accessibility(X,
-			cell_states)
+		
+		# print(f"X: {X.shape}")
+		bias_ret = self.bias(X)[0][:, 0]
+		access_ret = self.accessibility(X, cell_states)
+		# print(f"bias: {bias_ret.shape}")
+		# print(f"acess: {access_ret.shape}")
+		return read_depths + bias_ret + access_ret
 		
 	@torch.no_grad()
 	def predict(self, X, cell_states, read_depths, batch_size=16, 
@@ -293,10 +297,19 @@ class DragoNNFruit(torch.nn.Module):
 	def _train_step(self, X, cell_states, read_depths, y, optimizer):
 		optimizer.zero_grad()
 
-		with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
-			y_hat = self(X, cell_states, read_depths)
-
+		# with torch.autocast(device_type='cuda', dtype=torch.double):
+		
+		cell_states = cell_states.float()
+		read_depths = read_depths.float()
+		# print(f"X: {X.dtype}")
+		# print(f"cell_states: {cell_states.dtype}")
+		# print(f"read_depths: {read_depths.dtype}")
+		y_hat = self(X, cell_states, read_depths)
+		# print(f"shape0: {y_hat.shape}")
+		# print(f"y hat: {y_hat}")
 		y_hat_ = torch.nn.functional.log_softmax(y_hat.flatten(), dim=-1)
+		# print(f"shape1: {y_hat_.shape}")
+		# print(f"shape2: {y.flatten().shape}")
 		loss = MNLLLoss(y_hat_, y.flatten())
 
 		loss_ = loss.item()
@@ -327,10 +340,15 @@ class DragoNNFruit(torch.nn.Module):
 				y = y.cuda()
 				cell_states = cell_states.cuda()
 				read_depths = read_depths.cuda()
+				
+				# print(f"X: {X}")
+				# print(f"cell_states: {cell_states}")
+				# print(f"read_depths: {read_depths}")
+				# print(f"y: {y}")
 
 				train_loss = self._train_step(X, cell_states, read_depths, y,
 					optimizer)
-
+				# print(f"Train loss: {train_loss}")
 				if verbose and i % validation_iter == 0:
 					train_time = time.time() - start
 					tic = time.time()
@@ -694,7 +712,7 @@ class CellStateController(torch.nn.Module):
 		cell_states: torch.tensor, shape=(-1, n_outputs)
 			A tensor representing the transformed state of each cell.
 		"""
-
+		# print(f"cell_states inside forward: {cell_states.dtype}")
 		cell_states = self.irelu(self.ifc(cell_states))
 		for i in range(self.n_layers):
 			cell_states = self.relus[i](self.fcs[i](cell_states))
