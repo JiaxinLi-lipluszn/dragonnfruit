@@ -15,6 +15,7 @@ from bpnetlite.performance import calculate_performance_measures
 
 from bpnetlite.logging import Logger
 
+import tensorflow as tf
 
 @torch.inference_mode()
 def trt_predict(model, X, cell_states, read_depths, batch_size=32):
@@ -129,11 +130,14 @@ class DragoNNFruit(torch.nn.Module):
 		The name to prepend when saving the file.
 	"""
 
-	def __init__(self, bias, accessibility, name, alpha=1):
+	def __init__(self, bias, accessibility, name, alpha=1, bias_type = "chrombpnet"):
 		super(DragoNNFruit, self).__init__()
 
-		for parameter in bias.parameters():
-			parameter.requires_grad = False
+		self.bias_type = bias_type
+
+		if self.bias_type == "bpnet-lite":
+			for parameter in bias.parameters():
+				parameter.requires_grad = False
 
 		self.bias = bias
 		self.accessibility = accessibility
@@ -173,11 +177,15 @@ class DragoNNFruit(torch.nn.Module):
 			a normalized value.
 		"""
 		
-		# print(f"X: {X.shape}")
-		bias_ret = self.bias(X)[0][:, 0]
 		access_ret = self.accessibility(X, cell_states)
-		# print(f"bias: {bias_ret.shape}")
-		# print(f"acess: {access_ret.shape}")
+
+		if self.bias_type == "bpnet-lite":
+			bias_ret = self.bias(X)[0][:, 0]
+		else:
+			X_tf = tf.convert_to_tensor(X.detach().numpy())
+			bias_ret = self.bias(X_tf)
+			bias_ret = torch.tensor(bias_ret.numpy(), requires_grad=False)
+			
 		return read_depths + bias_ret + access_ret
 		
 	@torch.no_grad()
