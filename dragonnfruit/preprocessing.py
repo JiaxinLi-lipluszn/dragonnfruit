@@ -321,10 +321,14 @@ def _extract_fragments(filename, chrom_sizes, include_cells=None,
 
 			# Only after all the filters, add a new cell if an explicit
 			# inclusion list has not been provided.
-			prefix_name = cell_name_prefix + name
+			# Jiaxin added if else to consider the non cell name prefix provided situation
+			prefix_name = (cell_name_prefix if cell_name_prefix is not None else "") + name
 			if include_cells is None and prefix_name not in _cell_name_mapping:
 				name_rc = reverse_complement(name)
-				prefix_name_rc = cell_name_prefix + name_rc
+				# print(name_rc)
+				# print(cell_name_prefix)
+				# Jiaxin added if else to consider the non cell name prefix provided situation
+				prefix_name_rc = (cell_name_prefix if cell_name_prefix is not None else "") + name_rc
 
 				_cell_names.append(name)
 				_cell_name_mapping[prefix_name] = n_cells
@@ -343,9 +347,11 @@ def _extract_fragments(filename, chrom_sizes, include_cells=None,
 			_fragment_count += 1
 
 			# The fragment file is +4/-5 corrected and we need +4/-4
+			# TODO: confirm the implementation here
+			# Jiaxin modified the -5 to -4
 			X[chrom]['row'].append(cell_idx)
 			X[chrom]['col'].append(start + 4 - start_offset)
-			X[chrom]['col'].append(end - end_offset - 5)
+			X[chrom]['col'].append(end - end_offset - 4)
 
 	for d in X.values():
 		d['row'].trim()
@@ -525,6 +531,7 @@ def extract_fragments(fragments, chrom_sizes, chroms=None, include_cells=None,
 	_cell_name_mapping = {}
 	n_cells = 0
 
+
 	for X_i, read_depths_i, _cell_names_i, _cell_name_mapping_i in results:
 		_cell_names.extend(_cell_names_i)
 		for name, idx in _cell_name_mapping_i.items():
@@ -554,7 +561,9 @@ def extract_fragments(fragments, chrom_sizes, chroms=None, include_cells=None,
 
 
 	read_depths = numpy.array([read_depths[i] for i in range(n_cells)])
-	return X_cscs, read_depths
+
+	# Jiaxin edited: also return _cell_name_mapping to make sure the cell indices are matched in the downstream analysis
+	return X_cscs, read_depths, _cell_name_mapping
 
 
 def extract_cellxpeak(X, peaks, chroms=None, verbose=False):
