@@ -139,6 +139,10 @@ class DragoNNFruit(torch.nn.Module):
 			for parameter in bias.parameters():
 				parameter.requires_grad = False
 
+		if self.bias_type == "chrombpnet":
+			for layer in bias.layers:
+				layer.trainable = False
+
 		self.bias = bias
 		self.accessibility = accessibility
 		self.name = name
@@ -182,9 +186,12 @@ class DragoNNFruit(torch.nn.Module):
 		if self.bias_type == "bpnet-lite":
 			bias_ret = self.bias(X)[0][:, 0]
 		else:
-			X_tf = tf.convert_to_tensor(X.detach().numpy())
+			with tf.device('/CPU:0'):
+				X_tf = tf.convert_to_tensor(torch.transpose(X, 1, 2).detach().cpu().numpy())
+
 			bias_ret = self.bias(X_tf)
-			bias_ret = torch.tensor(bias_ret.numpy(), requires_grad=False)
+			# print(bias_ret)
+			bias_ret = torch.tensor(bias_ret[0].numpy(), requires_grad=False, device=torch.device('cuda:0'))
 			
 		return read_depths + bias_ret + access_ret
 		
